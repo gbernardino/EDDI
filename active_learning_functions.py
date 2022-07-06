@@ -8,79 +8,82 @@ import argparse
 import os
 import random
 from random import sample
+if __name__ == '__main__':
+    #### parser configurations
+    parser = argparse.ArgumentParser(
+        description='EDDI')
+    parser.add_argument(
+        '--epochs',
+        type=int,
+        default=3000,
+        metavar='N_eps',
+        help='number of epochs to train (default: 3000)')
+    parser.add_argument(
+        '--latent_dim',
+        type=int,
+        default=10,
+        metavar='LD',
+        help='latent dimension (default: 10)')
+    parser.add_argument(
+        '--p',
+        type=float,
+        default=0.7,
+        metavar='probability',
+        help='dropout probability of artificial missingness during training')
+    parser.add_argument(
+        '--iteration',
+        type=int,
+        default= 200,
+        metavar='it',
+        help='iterations per epoch. set to -1 to run the full epoch. ')
+    parser.add_argument(
+        '--batch_size',
+        type=int,
+        default=100,
+        metavar='batch',
+        help='Mini Batch size per epoch.  ')
+    parser.add_argument(
+        '--K',
+        type=int,
+        default=20,
+        metavar='K',
+        help='Dimension of PNP feature map ')
+    parser.add_argument(
+        '--M',
+        type=int,
+        default=50,
+        metavar='M',
+        help='Number of MC samples when perform imputing')
+    parser.add_argument(
+        '--eval',
+        type=str,
+        default='rmse',
+        metavar='eval',
+        help='eval: evaluation metric of active learning. ''rmse'':rmse; ''nllh'':negative log likelihood')
+    parser.add_argument(
+        '--repeat',
+        type=int,
+        default=5,
+        metavar='repeat',
+        help='Number of repeats of the active learning experiment')
+    parser.add_argument(
+        '--output_dir',
+        type=str,
+        default=os.getenv('PT_OUTPUT_DIR', '/tmp'))
+    parser.add_argument(
+        '--data_dir',
+        type=str,
+        default=os.getenv('PT_DATA_DIR', 'data'),
+        help='Directory where UCI dataset is stored.')
+    args = parser.parse_args()
 
-#### parser configurations
-parser = argparse.ArgumentParser(
-    description='EDDI')
-parser.add_argument(
-    '--epochs',
-    type=int,
-    default=3000,
-    metavar='N_eps',
-    help='number of epochs to train (default: 3000)')
-parser.add_argument(
-    '--latent_dim',
-    type=int,
-    default=10,
-    metavar='LD',
-    help='latent dimension (default: 10)')
-parser.add_argument(
-    '--p',
-    type=float,
-    default=0.7,
-    metavar='probability',
-    help='dropout probability of artificial missingness during training')
-parser.add_argument(
-    '--iteration',
-    type=int,
-    default=-1,
-    metavar='it',
-    help='iterations per epoch. set to -1 to run the full epoch. ')
-parser.add_argument(
-    '--batch_size',
-    type=int,
-    default=100,
-    metavar='batch',
-    help='Mini Batch size per epoch.  ')
-parser.add_argument(
-    '--K',
-    type=int,
-    default=20,
-    metavar='K',
-    help='Dimension of PNP feature map ')
-parser.add_argument(
-    '--M',
-    type=int,
-    default=50,
-    metavar='M',
-    help='Number of MC samples when perform imputing')
-parser.add_argument(
-    '--eval',
-    type=str,
-    default='rmse',
-    metavar='eval',
-    help='eval: evaluation metric of active learning. ''rmse'':rmse; ''nllh'':negative log likelihood')
-parser.add_argument(
-    '--repeat',
-    type=int,
-    default=5,
-    metavar='repeat',
-    help='Number of repeats of the active learning experiment')
-parser.add_argument(
-    '--output_dir',
-    type=str,
-    default=os.getenv('PT_OUTPUT_DIR', '/tmp'))
-parser.add_argument(
-    '--data_dir',
-    type=str,
-    default=os.getenv('PT_DATA_DIR', 'data'),
-    help='Directory where UCI dataset is stored.')
-args = parser.parse_args()
-
-#### Set directories
-UCI = args.data_dir
-ENCODER_WEIGHTS = os.path.join(args.output_dir, 'encoder.tensorflow')
-FINETUNED_DECODER_WEIGHTS = os.path.join(args.output_dir, 'generator.tensorflow')
+    #### Set directories
+    UCI = args.data_dir
+    ENCODER_WEIGHTS = os.path.join(args.output_dir, 'encoder.tensorflow')
+    FINETUNED_DECODER_WEIGHTS = os.path.join(args.output_dir, 'generator.tensorflow')
+rs = 42 # random seed
+ENCODER_WEIGHTS = os.path.join('./output', 'encoder.tensorflow')
+FINETUNED_DECODER_WEIGHTS = os.path.join('./output', 'generator.tensorflow')
 rs = 42 # random seed
 
 def p_vae_active_learning(Data_train,mask_train,Data_test,mask_test,epochs,latent_dim,batch_size,p,K,M,eval,Repeat,estimation_method=0):

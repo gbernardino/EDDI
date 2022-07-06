@@ -405,8 +405,12 @@ class PN_Plus_VAE(object):
         var = v**2
         log_var = 2 * np.log(v)
 
-        temp_mask[:, i] = 1
-
+        if isinstance(i, int):
+            temp_mask[:, i] = 1
+        else:
+            for ii in i:
+                temp_mask[:,i] = 1
+                
         m_i, v_i = self._sesh.run([self.mean, self.stddev],
                                   feed_dict={
                                       self.x: x,
@@ -447,7 +451,11 @@ class PN_Plus_VAE(object):
         var = v**2
         log_var = 2 * np.log(v)
 
-        temp_mask[:, i] = 1
+        if isinstance(i, int):
+            temp_mask[:, i] = 1
+        else:
+            for ii in i:
+                temp_mask[:,i] = 1
 
         m_i, v_i = self._sesh.run([self.mean, self.stddev],
                                   feed_dict={
