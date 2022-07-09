@@ -22,7 +22,8 @@ class PN_Plus_VAE(object):
                  batch_size = 100,
                  load_model=0,
                  M=5,
-                 all=1):
+                 all=1,
+                groups_indices = None):
         '''
         :param encoder: type of encoder model choosen from coding.py
         :param decoder: type of decoder model choosen from coding.py
@@ -38,8 +39,6 @@ class PN_Plus_VAE(object):
         :param batch_size: training batch size
         :param load_model: 1 = load a pre-trained model from decoder_path and encoder_path
         :param M : number of MC samples used when performing imputing/prediction
-
-
         '''
         self._K = K
         self._latent_dim = latent_dim
@@ -57,8 +56,7 @@ class PN_Plus_VAE(object):
         self._encoder_path = encoder_path
         self._M = M
         self._build_graph()
-
-
+                           
     ## build partial VAE
     def _build_graph(self):
 
@@ -392,7 +390,7 @@ class PN_Plus_VAE(object):
         used only in active learning phase
         :param x: data
         :param mask: mask of missingness
-        :param i: indicates the index of x_i
+        :param i: indicates the index of x_i. It can be a group of indices, for multivariate 
         :return:  the first term of information reward approximation
         '''
         temp_mask = copy.deepcopy(mask)
@@ -549,7 +547,7 @@ def R_lindley_chain(i, x, mask, M, vae, im, loc):
     im_target = im[:, :, -1]
     temp_x = copy.deepcopy(x)
     for m in range(M):
-        temp_x[loc, i] = im_i[m, loc]
+        temp_x[loc][:,i] = im_i[m, loc]
         KL_I = vae.chaini_I(temp_x[loc, :], mask[loc, :], i)
         temp_x[loc, -1] = im_target[m, loc]
         KL_II = vae.chaini_II(temp_x[loc, :], mask[loc, :], i)

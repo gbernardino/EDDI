@@ -330,7 +330,7 @@ def p_vae_active_learning(Data_train,mask_train,Data_test,mask_test,epochs,laten
 
 
 
-def train_p_vae(Data_train,mask_train, epochs, latent_dim,batch_size, p, K,iteration):
+def train_p_vae(Data_train,mask_train, epochs, latent_dim,batch_size, p, K,iteration, groups_idx):
     '''
         This function trains the partial VAE.
         :param Data_train: training Data matrix, N by D
@@ -340,8 +340,10 @@ def train_p_vae(Data_train,mask_train, epochs, latent_dim,batch_size, p, K,itera
         :param p: dropout rate for creating additional missingness during training
         :param K: dimension of feature map of PNP encoder
         :param iteration: how many mini-batches are used each epoch. set to -1 to run the full epoch.
+        :param groups_idx: list with indices of variables that need to be together
         :return: trained VAE, together with the test data used for testing.
         '''
+
 
     obs_dim = Data_train.shape[1]
     n_train = Data_train.shape[0]
@@ -395,13 +397,17 @@ def train_p_vae(Data_train,mask_train, epochs, latent_dim,batch_size, p, K,itera
             #     if np.sum(mask_drop>0):
             #         break
 
-            DROPOUT_TRAIN = np.minimum(np.random.rand(mask_train_batch.shape[0], obs_dim), p)
+            DROPOUT_TRAIN_group = np.minimum(np.random.rand(mask_train_batch.shape[0], len(groups_idx)), p)
             while True:
                 # mask_drop = np.array([bernoulli.rvs(1 - DROPOUT_TRAIN)] )
-                mask_drop = bernoulli.rvs(1 - DROPOUT_TRAIN)
-                if np.sum(mask_drop > 0):
+                mask_drop_group = bernoulli.rvs(1 - DROPOUT_TRAIN_group)
+                if np.sum(mask_drop_group > 0):
                     break
-
+            mask_drop = np.zeros((mask_train_batch.shape[0], obs_dim), dtype = mask_drop_group.dtype)
+            for i, g in enumerate(groups_idx):
+                for j in g:
+                    mask_drop[:, j] = mask_drop_group[:, i]
+            
             mask_drop = mask_drop.reshape([kwargs['batch_size'], obs_dim])
             _ = vae.update(x, mask_drop*mask_train_batch)
             loss_full, _, _ = vae.full_batch_loss(x,mask_drop*mask_train_batch)
