@@ -8,6 +8,27 @@ tfd = tf.contrib.distributions
 import argparse, datetime, pickle
 
 
+def getGroupsFromDF(df):
+    currentGroup = None
+    groups_idx = []
+    group = []
+    for i, c in enumerate(df.columns):
+        if c.startswith('multivariate'):
+            n = '_'.join(c.split('_')[1:-1])
+            if n == currentGroup:
+                group.append(i)
+            else:
+                if group:
+                    groups_idx.append(group)
+                group = [i]
+                currentGroup = n
+        else:
+            if group:
+                groups_idx.append(group)
+            groups_idx.append([i])
+            group = []
+    return groups_idx
+
 
 
 parser = argparse.ArgumentParser(description='Train and evaluate the hierarchy for active feature selection using our exploration heuristic.')
@@ -71,6 +92,7 @@ K = args.K
 
 ### load data
 Data = pd.read_excel(args.pathTrain)
+groups_idx =  getGroupsFromDF(Data)
 Data = Data.values
 
 ### data preprocess
@@ -89,7 +111,6 @@ mask_train = np.ones_like(Data_train)
 mask_test = np.ones_like(Data_test)
 
 
-print(mask_train.shape)
 
 # Training
 tf.reset_default_graph()
@@ -99,7 +120,8 @@ epochs = args.epochs
 batch_size = args.batch_size
 latent_variable_dim = args.latent_dim
 K = args.K
-vae = active_learning_functions.train_p_vae(Data_train, mask_train, epochs, latent_variable_dim, batch_size, p, K, batch_size)
+vae = active_learning_functions.train_p_vae(Data_train, mask_train, epochs, 
+                                            latent_variable_dim, batch_size, p, K, batch_size, groups_idx= groups_idx)
 
 
 # Testing
@@ -124,18 +146,19 @@ for nMax in args.maxNumAcquisitions:
         T = OBS_DIM - 1
     else:
         T = nMax
+    group_eye = np.array([[1 if i in g else 0 for i in range(OBS_DIM)] for g in groups_idx])
 
     for t in range(T): # t is a indicator of step
-        R = -1e4 * np.ones((n_test, OBS_DIM - 1))
+        R = -1e4 * np.ones((n_test, len(groups_idx) - 1))
         im = p_vae.completion(x, mask, M, vae)
-        for u in range(OBS_DIM - 1): # u is the indicator for features. calculate reward function for each feature candidates
+        for u, g in enumerate(groups_idx[:-1]) : # u is the indicator for features. calculate reward function for each feature candidates
             loc = np.where(mask[:, u] == 0)[0]
 
-            R[loc, u] = p_vae.R_lindley_chain(u, x, mask, M, vae, im,
+            R[loc][:, u] = p_vae.R_lindley_chain(g, x, mask, M, vae, im,
                                         loc)
         i_optimal = R.argmax(axis=1)
         actions.append(i_optimal)
-        io = np.eye(OBS_DIM)[i_optimal]
+        io = group_eye[i_optimal]
 
 
         mask = mask + io # this mask takes into account both data missingness and missingness of unselected features
@@ -158,6 +181,7 @@ for nMax in args.maxNumAcquisitions:
     result['Accuracy'] = (pred > 0.5) == y_test
     result['YPred'] = pred
     result['AccuracyMean'] = np.mean((pred > 0.5) == y_test)
+    result['maxNumAcquisition'] = nMax
 
 
     path = args.pathOutput.split('.')[0] + f'_{nMax}.pkl' 
